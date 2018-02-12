@@ -27,7 +27,7 @@ location {{ .Path }} {
 		include fastcgi.conf;
 		fastcgi_pass {{ trim .Upstream }};
 	{{ else }}
-		proxy_pass {{ trim .Proto }}://{{ trim .Upstream }}/;
+		proxy_pass {{ trim .Proto }}://{{ trim .Upstream }};
 	{{ end }}
 
 	{{ if (exists (printf "/etc/nginx/htpasswd/%s" .Host)) }}
@@ -167,7 +167,7 @@ server {
 
 {{ range $host, $containers := groupByMulti $ "Env.VIRTUAL_HOST" "," }}
 
-{{ $paths := groupBy $containers "Env.VIRTUAL_PATH" }}
+{{ $paths := groupByMulti $containers "Env.VIRTUAL_PATH" "," }}
 {{ $nPaths := len $paths }}
 
 {{ if eq $nPaths 0 }}
