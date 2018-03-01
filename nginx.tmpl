@@ -44,10 +44,10 @@ location {{ .Path }} {
 {{ end }}
 
 {{ define "upstream-definition" }}
+  {{ $networks := .Networks }}
 	upstream {{ .Upstream }} {
 		{{ range $container := .Containers }}
 			{{ $addrLen := len $container.Addresses }}
-			{{ $networks := .Networks }}
 			{{ range $knownNetwork := $networks }}
 				{{ range $containerNetwork := $container.Networks }}
 					{{ if (and (ne $containerNetwork.Name "ingress") (or (eq $knownNetwork.Name $containerNetwork.Name) (eq $knownNetwork.Name "host"))) }}
@@ -172,7 +172,7 @@ server {
 
 {{ if eq $nPaths 0 }}
 	# {{ $host }}
-	{{ template "upstream-definition" (dict "Upstream" $host "Containers" $containers "Networks" (json $CurrentContainer.Networks)) }}
+	{{ template "upstream-definition" (dict "Upstream" $host "Containers" $containers "Networks" $CurrentContainer.Networks) }}
 {{ else }}
 	{{ range $path, $containers := $paths }}
 		{{ $sum := sha1 $path }}
