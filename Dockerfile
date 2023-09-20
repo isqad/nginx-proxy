@@ -1,37 +1,35 @@
-FROM nginx:1.13
-LABEL maintainer="Jason Wilder mail@jasonwilder.com"
+FROM nginxproxy/docker-gen:0.10.6-debian AS docker-gen
+FROM nginxproxy/forego:0.17.2-debian AS forego
 
-# Install wget and install/updates certificates
+FROM nginx:1.25.2
+ARG NGINX_PROXY_VERSION
+# Add DOCKER_GEN_VERSION environment variable because
+# acme-companion rely on it (but the actual value is not important)
+ARG DOCKER_GEN_VERSION="unknown"
+ENV NGINX_PROXY_VERSION=${NGINX_PROXY_VERSION} \
+   DOCKER_GEN_VERSION=${DOCKER_GEN_VERSION} \
+   DOCKER_HOST=unix:///tmp/docker.sock
+
+# Install/update certificates
 RUN apt-get update \
- && apt-get install -y -q --no-install-recommends \
-    ca-certificates \
-    wget \
- && apt-get clean \
- && rm -r /var/lib/apt/lists/*
+   && apt-get install -y -q --no-install-recommends ca-certificates \
+   && apt-get clean \
+   && rm -r /var/lib/apt/lists/*
 
-
-# Configure Nginx and apply fix for very long server names
+# Configure Nginx
 RUN echo "daemon off;" >> /etc/nginx/nginx.conf \
- && sed -i 's/worker_processes  1/worker_processes  auto/' /etc/nginx/nginx.conf
+   && sed -i 's/worker_processes  1/worker_processes  auto/' /etc/nginx/nginx.conf \
+   && sed -i 's/worker_connections  1024/worker_connections  10240/' /etc/nginx/nginx.conf \
+   && mkdir -p '/etc/nginx/dhparam'
 
-# Install Forego
-ADD https://github.com/jwilder/forego/releases/download/v0.16.1/forego /usr/local/bin/forego
-RUN chmod u+x /usr/local/bin/forego
-
-ENV DOCKER_GEN_VERSION 0.7.3
-
-RUN wget https://github.com/jwilder/docker-gen/releases/download/$DOCKER_GEN_VERSION/docker-gen-linux-amd64-$DOCKER_GEN_VERSION.tar.gz \
- && tar -C /usr/local/bin -xvzf docker-gen-linux-amd64-$DOCKER_GEN_VERSION.tar.gz \
- && rm /docker-gen-linux-amd64-$DOCKER_GEN_VERSION.tar.gz
+# Install Forego + docker-gen
+COPY --from=forego /usr/local/bin/forego /usr/local/bin/forego
+COPY --from=docker-gen /usr/local/bin/docker-gen /usr/local/bin/docker-gen
 
 COPY network_internal.conf /etc/nginx/
 
-COPY . /app/
+COPY app nginx.tmpl /app/
 WORKDIR /app/
-
-ENV DOCKER_HOST unix:///tmp/docker.sock
-
-VOLUME ["/etc/nginx/certs", "/etc/nginx/dhparam"]
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["forego", "start", "-r"]
