@@ -16,6 +16,9 @@ RUN apt-get update \
    && apt-get clean \
    && rm -r /var/lib/apt/lists/*
 
+RUN sed -i 's/mozilla\/DST_Root_CA_X3\.crt/!mozilla\/DST_Root_CA_X3.crt/' /etc/ca-certificates.conf \
+  && update-ca-certificates
+
 # Configure Nginx
 RUN echo "daemon off;" >> /etc/nginx/nginx.conf \
    && sed -i 's/worker_processes  1/worker_processes  auto/' /etc/nginx/nginx.conf \

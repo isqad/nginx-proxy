@@ -475,7 +475,7 @@ server {
     {{- $is_regexp := hasPrefix "~" $host }}
     {{- $upstream_name := when (or $is_regexp $globals.sha1_upstream_name) (sha1 $host) $host }}
 
-    {{- $paths := groupBy $containers "Env.VIRTUAL_PATH" }}
+    {{- $paths := groupByMulti $containers "Env.VIRTUAL_PATH" "," }}
     {{- $nPaths := len $paths }}
     {{- if eq $nPaths 0 }}
         {{- $paths = dict "/" $containers }}
